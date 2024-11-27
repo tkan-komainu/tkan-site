@@ -129,7 +129,8 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emurgo/cip2-js@2.1.0/umd/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emurgo/cardano-serialization-lib-browser@13.2.0/cardano_serialization_lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emurgo/cardano-message-signing-browser@1.0.1/cardano_message_signing.min.js"></script>
 
 </head>
 <body>
@@ -231,7 +232,7 @@
     });
 
     /* Eternl Wallet Connection Logic */
-    document.addEventListener('DOMContentLoaded', () => {
+   document.addEventListener('DOMContentLoaded', () => {
     const connectWalletButton = document.getElementById('connectWallet');
     const walletAddressDisplay = document.getElementById('walletAddress');
     const walletBalanceDisplay = document.getElementById('walletBalance');
@@ -242,16 +243,13 @@
                 throw new Error('Eternl wallet is not available. Please install Eternl wallet.');
             }
 
-            // Enable Eternl Wallet
             const eternlWallet = await window.cardano.eternl.enable();
-
-            // Get Address
             const usedAddresses = await eternlWallet.getUsedAddresses();
             const hexAddress = usedAddresses[0];
-            const address = bech32.encode('addr', bech32.toWords(Buffer.from(hexAddress, 'hex')));
+
+            const address = CardanoWasm.Address.from_bytes(Buffer.from(hexAddress, 'hex')).to_bech32();
             walletAddressDisplay.innerHTML = `Connected Address: <code>${address}</code>`;
 
-            // Get Balance
             const balanceHex = await eternlWallet.getBalance();
             const balance = parseInt(balanceHex, 16) / 1000000; // Convert lovelace to ADA
             walletBalanceDisplay.innerHTML = `Balance: <strong>${balance.toFixed(2)} ADA</strong>`;
@@ -262,6 +260,7 @@
         }
     });
 });
+
 
 </script>
 
