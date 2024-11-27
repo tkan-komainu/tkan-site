@@ -130,7 +130,6 @@
     </style>
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script src="https://unpkg.com/@emurgo/cardano-serialization-lib-browser@11.0.1/cardano_serialization_lib.min.js"></script>
-
 </head>
 <body>
 
@@ -243,16 +242,20 @@
                 }
 
                 const eternlWallet = await window.cardano.eternl.enable();
+
+                // Fetch the used address in Hex
                 const usedAddresses = await eternlWallet.getUsedAddresses();
                 const hexAddress = usedAddresses[0];
 
-                const address = CardanoWasm.Address.from_bytes(
+                // Convert Hex to Bech32 using cardano-serialization-lib
+                const address = CardanoSerializationLib.Address.from_bytes(
                     Uint8Array.from(Buffer.from(hexAddress, 'hex'))
                 ).to_bech32();
                 walletAddressDisplay.innerHTML = `Connected Address: <code>${address}</code>`;
 
+                // Fetch the balance and convert it to ADA
                 const balanceHex = await eternlWallet.getBalance();
-                const balance = parseInt(balanceHex, 16) / 1000000;
+                const balance = parseInt(balanceHex, 16) / 1000000; // Convert Lovelace to ADA
                 walletBalanceDisplay.innerHTML = `Balance: <strong>${balance.toFixed(2)} ADA</strong>`;
             } catch (error) {
                 console.error('Wallet connection failed:', error);
@@ -261,9 +264,8 @@
             }
         });
     });
-
-
 </script>
+
 
 </body>
 </html>
