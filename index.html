@@ -69,8 +69,22 @@
             background: #0056b3;
         }
 
-        h2, h3 {
-            color: #1f1f1f;
+        .wallet-info {
+            text-align: center;
+            margin: 30px auto;
+            color: #333;
+            width: 80%;
+        }
+
+        .wallet-info p {
+            margin: 10px 0;
+        }
+
+        .wallet-info code {
+            background-color: #f4f4f4;
+            padding: 5px;
+            border-radius: 3px;
+            display: inline-block;
         }
 
         .btn {
@@ -78,7 +92,7 @@
             background: #007bff;
             color: #fff;
             padding: 10px 20px;
-            margin: 10px 0;
+            margin: 20px 0;
             text-decoration: none;
             border-radius: 5px;
             cursor: pointer;
@@ -109,23 +123,6 @@
 
         .social a:hover {
             text-decoration: underline;
-        }
-
-        /* Wallet Info Section */
-        .wallet-info {
-            text-align: center;
-            margin-top: 30px;
-            color: #333;
-        }
-
-        .wallet-info p {
-            margin: 10px 0;
-        }
-
-        .wallet-info code {
-            background-color: #f4f4f4;
-            padding: 5px;
-            border-radius: 3px;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
@@ -207,8 +204,9 @@
                 walletAddressDisplay.innerHTML = `Connected Address: <code>${address}</code>`;
 
                 // Fetch the balance and convert it to ADA
-                const balance = await eternlWallet.getBalance();
-                walletBalanceDisplay.innerHTML = `Balance: <strong>${(balance / 1000000).toFixed(2)} ADA</strong>`;
+                const balanceHex = await eternlWallet.getBalance();
+                const balance = parseInt(balanceHex, 16) / 1000000; // Convert Lovelace to ADA
+                walletBalanceDisplay.innerHTML = `Balance: <strong>${balance.toFixed(2)} ADA</strong>`;
             } catch (error) {
                 console.error('Wallet connection failed:', error);
                 walletAddressDisplay.textContent = 'Failed to connect wallet.';
