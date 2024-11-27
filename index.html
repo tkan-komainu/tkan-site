@@ -63,6 +63,9 @@
             margin: 10px 0;
             text-decoration: none;
             border-radius: 5px;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
         }
 
         .btn:hover {
@@ -89,7 +92,25 @@
         .social a:hover {
             text-decoration: underline;
         }
+
+        /* Wallet Info Section */
+        .wallet-info {
+            text-align: center;
+            margin-top: 30px;
+            color: #333;
+        }
+
+        .wallet-info p {
+            margin: 10px 0;
+        }
+
+        .wallet-info code {
+            background-color: #f4f4f4;
+            padding: 5px;
+            border-radius: 3px;
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@meshsdk/core@0.6.3/umd/mesh.min.js"></script>
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
 </head>
 <body>
@@ -108,36 +129,12 @@
             The Cardano ecosystem is filled with clutter from harmful SCAM or unwanted tokens, and trash NFTs. These pollutants
             poison your wallet and the environment. TKAN aims to solve this by creating a "Trash Kan" on the Cardano blockchain.
         </p>
-        <p>
-            With TKAN, you can send any SCAM or unwanted tokens or NFTs to our address, where they will be locked forever. Our smart contract
-            ensures these tokens are disposed of responsibly, keeping them out of circulation and your sight.
-        </p>
     </div>
 
-    <div class="how-it-works">
-        <h2>How It Works</h2>
-        <p>
-            When you send SCAM or unwanted tokens to TKAN's address, our validator locks them permanently in a specific trash can on
-            the blockchain. The validator script ensures that these tokens cannot be moved ever again. This is how we protect
-            the Cardano environment.
-        </p>
-        <p>
-            In exchange for a small fee (the same amount the SCAMMER sent you, with a minimum of 2 ADA), those trash tokens will be securely locked.
-            If you send more ADA than the required minimum, you'll receive our exclusive <strong>FAN Token</strong> as a reward, allowing you to show your pride as a
-            "LION of Cardano" who is helping to maintain a clean ecosystem.
-        </p>
-        <a class="btn" href="#send-tokens">Send Your Tokens Now</a>
-    </div>
-
-    <div id="send-tokens">
-        <h2>Send Tokens</h2>
-        <p>
-            To dispose of your SCAM or unwanted tokens, send them to the following address:
-        </p>
-        <p><strong>Address:</strong> <code>COMING SOON</code></p>
-        <p>
-            Help us keep the Cardano ecosystem clean and earn your FAN Token!
-        </p>
+    <div class="wallet-info">
+        <button id="connectWallet" class="btn">Connect Wallet</button>
+        <p id="walletAddress"></p>
+        <p id="walletBalance"></p>
     </div>
 </div>
 
@@ -177,6 +174,36 @@
                 "bounce": false
             }
         }
+    });
+
+    /* MeshJS Wallet Integration */
+    document.addEventListener('DOMContentLoaded', () => {
+        const connectWalletButton = document.getElementById('connectWallet');
+        const walletAddressDisplay = document.getElementById('walletAddress');
+        const walletBalanceDisplay = document.getElementById('walletBalance');
+
+        connectWalletButton.addEventListener('click', async () => {
+            try {
+                const walletApi = await window.Mesh.Wallet.connect();
+
+                // Get wallet address
+                const addresses = await walletApi.getUsedAddresses();
+                if (addresses.length > 0) {
+                    walletAddressDisplay.innerHTML = `Connected Address: <code>${addresses[0]}</code>`;
+                } else {
+                    walletAddressDisplay.textContent = 'No wallet address found.';
+                }
+
+                // Get wallet balance
+                const balance = await walletApi.getBalance();
+                const adaBalance = balance / 1000000; // Convert lovelace to ADA
+                walletBalanceDisplay.innerHTML = `Balance: <strong>${adaBalance} ADA</strong>`;
+            } catch (error) {
+                console.error('Wallet connection failed:', error);
+                walletAddressDisplay.textContent = 'Failed to connect wallet.';
+                walletBalanceDisplay.textContent = '';
+            }
+        });
     });
 </script>
 
