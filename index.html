@@ -230,7 +230,7 @@
     });
 
     /* Eternl Wallet Connection Logic */
-    document.addEventListener('DOMContentLoaded', () => {
+       document.addEventListener('DOMContentLoaded', () => {
         const connectWalletButton = document.getElementById('connectWallet');
         const walletAddressDisplay = document.getElementById('walletAddress');
         const walletBalanceDisplay = document.getElementById('walletBalance');
@@ -248,7 +248,7 @@
                 const hexAddress = usedAddresses[0];
 
                 // Convert Hex to Bech32 using cardano-serialization-lib
-                const address = CardanoSerializationLib.Address.from_bytes(
+                const address = CardanoWasm.Address.from_bytes(
                     Uint8Array.from(Buffer.from(hexAddress, 'hex'))
                 ).to_bech32();
                 walletAddressDisplay.innerHTML = `Connected Address: <code>${address}</code>`;
