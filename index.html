@@ -110,8 +110,6 @@
             border-radius: 3px;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@meshsdk/core/umd/mesh.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
 </head>
 <body>
@@ -124,44 +122,6 @@
 </header>
 
 <div class="container">
-    <div class="story">
-        <h2>Our Mission</h2>
-        <p>
-            The Cardano ecosystem is filled with clutter from harmful SCAM or unwanted tokens, and trash NFTs. These pollutants
-            poison your wallet and the environment. TKAN aims to solve this by creating a "Trash Kan" on the Cardano blockchain.
-        </p>
-        <p>
-            With TKAN, you can send any SCAM or unwanted tokens or NFTs to our address, where they will be locked forever. Our smart contract
-            ensures these tokens are disposed of responsibly, keeping them out of circulation and your sight.
-        </p>
-    </div>
-
-    <div class="how-it-works">
-        <h2>How It Works</h2>
-        <p>
-            When you send SCAM or unwanted tokens to TKAN's address, our validator locks them permanently in a specific trash can on
-            the blockchain. The validator script ensures that these tokens cannot be moved ever again. This is how we protect
-            the Cardano environment.
-        </p>
-        <p>
-            In exchange for a small fee (the same amount the SCAMMER sent you, with a minimum of 2 ADA), those trash tokens will be securely locked.
-            If you send more ADA than the required minimum, you'll receive our exclusive <strong>FAN Token</strong> as a reward, allowing you to show your pride as a
-            "LION of Cardano" who is helping to maintain a clean ecosystem.
-        </p>
-        <a class="btn" href="#send-tokens">Send Your Tokens Now</a>
-    </div>
-
-    <div id="send-tokens">
-        <h2>Send Tokens</h2>
-        <p>
-            To dispose of your SCAM or unwanted tokens, send them to the following address:
-        </p>
-        <p><strong>Address:</strong> <code>COMING SOON</code></p>
-        <p>
-            Help us keep the Cardano ecosystem clean and earn your FAN Token!
-        </p>
-    </div>
-
     <div class="wallet-info">
         <h2>Connect Your Wallet</h2>
         <p>
@@ -211,7 +171,7 @@
         }
     });
 
-    /* MeshJS Wallet Integration */
+    /* Eternl Wallet Connection Logic */
     document.addEventListener('DOMContentLoaded', () => {
         const connectWalletButton = document.getElementById('connectWallet');
         const walletAddressDisplay = document.getElementById('walletAddress');
@@ -219,20 +179,23 @@
 
         connectWalletButton.addEventListener('click', async () => {
             try {
-                const walletApi = await window.Mesh.Wallet.connect();
-
-                // Get wallet address
-                const addresses = await walletApi.getUsedAddresses();
-                if (addresses.length > 0) {
-                    walletAddressDisplay.innerHTML = `Connected Address: <code>${addresses[0]}</code>`;
-                } else {
-                    walletAddressDisplay.textContent = 'No wallet address found.';
+                // Check for Eternl Wallet
+                if (!window.cardano || !window.cardano.eternl) {
+                    throw new Error('Eternl wallet is not available. Please install Eternl wallet.');
                 }
 
-                // Get wallet balance
-                const balance = await walletApi.getBalance();
-                const adaBalance = balance / 1000000; // Convert lovelace to ADA
-                walletBalanceDisplay.innerHTML = `Balance: <strong>${adaBalance} ADA</strong>`;
+                // Enable Eternl Wallet
+                const eternlWallet = await window.cardano.eternl.enable();
+
+                // Get Address
+                const usedAddresses = await eternlWallet.getUsedAddresses();
+                const address = await window.cardano.util.hexToBech32(usedAddresses[0]);
+                walletAddressDisplay.innerHTML = `Connected Address: <code>${address}</code>`;
+
+                // Get Balance
+                const balanceHex = await eternlWallet.getBalance();
+                const balance = parseInt(balanceHex, 16) / 1000000; // Convert lovelace to ADA
+                walletBalanceDisplay.innerHTML = `Balance: <strong>${balance.toFixed(2)} ADA</strong>`;
             } catch (error) {
                 console.error('Wallet connection failed:', error);
                 walletAddressDisplay.textContent = 'Failed to connect wallet.';
