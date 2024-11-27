@@ -6,30 +6,55 @@
     <meta name="description" content="TKAN - A Cardano Trash Kan to clean up SCAM and unwanted tokens and protect the Cardano ecosystem.">
     <title>TKAN - The Cardano Trash Kan</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        /* General Reset */
+        body, html {
             margin: 0;
             padding: 0;
-            background-color: #f4f4f9;
-            color: #333;
-            line-height: 1.6;
+            height: 100%;
+            overflow-x: hidden;
         }
+
+        /* Top Section with Particles Background */
         header {
-            background-color: #1f1f1f;
-            color: #fff;
-            padding: 20px;
+            position: relative;
+            height: 300px;
+            background: linear-gradient(145deg, #1e1e2f, #2c2c4a);
+            color: white;
             text-align: center;
+            overflow: hidden;
         }
+
+        #particles-js {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
         header img {
-            max-width: 150px;
+            z-index: 1;
+            position: relative;
             border-radius: 50%;
+            max-width: 150px;
         }
+
+        header h1, header p {
+            z-index: 1;
+            position: relative;
+            margin: 10px;
+        }
+
+        /* Content Section */
         .container {
             padding: 20px;
         }
-        h1, h2, h3 {
+
+        h2, h3 {
             color: #1f1f1f;
         }
+
         .btn {
             display: inline-block;
             background: #007bff;
@@ -39,9 +64,11 @@
             text-decoration: none;
             border-radius: 5px;
         }
+
         .btn:hover {
             background: #0056b3;
         }
+
         .footer {
             background: #1f1f1f;
             color: #fff;
@@ -49,41 +76,40 @@
             padding: 10px 0;
             margin-top: 20px;
         }
-        .image-container {
-            text-align: center;
-            margin: 20px 0;
+
+        .social {
+            margin-top: 10px;
         }
-        .image-container img {
-            max-width: 300px;
-            border-radius: 15px;
+
+        .social a {
+            color: #1da1f2;
+            text-decoration: none;
         }
-        .story, .how-it-works, .komainu {
-            margin-bottom: 40px;
+
+        .social a:hover {
+            text-decoration: underline;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
 </head>
 <body>
 
 <header>
+    <div id="particles-js"></div>
     <img src="assets/TKAN-logo2.png" alt="TKAN Logo">
     <h1>TKAN - The Cardano Trash Kan</h1>
     <p>Guardians of Purity in the Cardano Ecosystem</p>
 </header>
 
 <div class="container">
-
-    <div class="image-container">
-        <img src="assets/TKAN-logo2.png" alt="Token Image">
-    </div>
-
     <div class="story">
         <h2>Our Mission</h2>
         <p>
-            The Cardano ecosystem is filled with clutter from unwanted tokens, harmful SCAMs, and trash NFTs. These pollutants
-            poison your wallet and the environment. TKAN aims to solve this by creating a public and decentralized "Trash Kan" on the Cardano blockchain.
+            The Cardano ecosystem is filled with clutter from harmful SCAM or unwanted tokens, and trash NFTs. These pollutants
+            poison your wallet and the environment. TKAN aims to solve this by creating a "Trash Kan" on the Cardano blockchain.
         </p>
         <p>
-            With TKAN, you can send any SCAM or unwanted tokens and NFTs to our address, where they will be locked forever. Our smart contract
+            With TKAN, you can send any SCAM or unwanted tokens or NFTs to our address, where they will be locked forever. Our smart contract
             ensures these tokens are disposed of responsibly, keeping them out of circulation and your sight.
         </p>
     </div>
@@ -91,25 +117,16 @@
     <div class="how-it-works">
         <h2>How It Works</h2>
         <p>
-            When you send unwanted tokens to TKAN's address, our validator locks them permanently in a specific trash can on
+            When you send SCAM or unwanted tokens to TKAN's address, our validator locks them permanently in a specific trash can on
             the blockchain. The validator script ensures that these tokens cannot be moved ever again. This is how we protect
             the Cardano environment.
         </p>
         <p>
-            In exchange for a small fee (the same amount the SCAMMER sent you, with a minimum of 2 ADA), your tokens will be securely locked.
-            If you send more ADA than the required minimum, you'll receive our exclusive <strong>FAN Token</strong> as a reward, showing your pride as a
+            In exchange for a small fee (the same amount the SCAMMER sent you, with a minimum of 2 ADA), those trash tokens will be securely locked.
+            If you send more ADA than the required minimum, you'll receive our exclusive <strong>FAN Token</strong> as a reward, allowing you to show your pride as a
             "LION of Cardano" who is helping to maintain a clean ecosystem.
         </p>
         <a class="btn" href="#send-tokens">Send Your Tokens Now</a>
-    </div>
-
-    <div class="komainu">
-        <h2>The Story of Komainu</h2>
-        <p>
-            Inspired by the Komainu, the mythical guardian lions of Japan, TKAN serves as the protector of purity and order in the Cardano blockchain.
-            These fierce guardians have stood watch over shrines and sacred spaces for centuries, ensuring no harm comes to their sanctuaries.
-            In the same way, TKAN guards the Cardano ecosystem, purging unwanted tokens and safeguarding its purity for all.
-        </p>
     </div>
 
     <div id="send-tokens">
@@ -119,15 +136,49 @@
         </p>
         <p><strong>Address:</strong> <code>COMING SOON</code></p>
         <p>
-            Help us keep the Cardano ecosystem clean and collect your FAN Token!
+            Help us keep the Cardano ecosystem clean and earn your FAN Token!
         </p>
     </div>
-
 </div>
 
 <div class="footer">
     <p>&copy; 2024 TKAN.io - All Rights Reserved</p>
+    <div class="social">
+        <p>Follow us on <a href="https://x.com/TKan_Komainu" target="_blank">@TKan_Komainu</a></p>
+    </div>
 </div>
+
+<script>
+    /* Particle.js Configuration */
+    particlesJS("particles-js", {
+        "particles": {
+            "number": {
+                "value": 80,
+                "density": { "enable": true, "value_area": 800 }
+            },
+            "color": { "value": "#ffffff" },
+            "shape": { "type": "circle" },
+            "opacity": { "value": 0.5 },
+            "size": { "value": 3 },
+            "line_linked": {
+                "enable": true,
+                "distance": 150,
+                "color": "#ffffff",
+                "opacity": 0.4,
+                "width": 1
+            },
+            "move": {
+                "enable": true,
+                "speed": 2,
+                "direction": "none",
+                "random": false,
+                "straight": false,
+                "out_mode": "out",
+                "bounce": false
+            }
+        }
+    });
+</script>
 
 </body>
 </html>
