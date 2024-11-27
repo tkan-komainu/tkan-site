@@ -49,7 +49,6 @@
         /* Content Section */
         .container {
             padding: 20px;
-            position: relative;
         }
 
         .send-tokens-btn {
@@ -69,11 +68,33 @@
             background: #0056b3;
         }
 
+        h2, h3 {
+            color: #1f1f1f;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #007bff;
+            color: #fff;
+            padding: 10px 20px;
+            margin: 10px 0;
+            text-decoration: none;
+            border-radius: 5px;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
         .wallet-info {
-            text-align: center;
-            margin: 30px auto;
-            color: #333;
-            width: 80%;
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
         }
 
         .wallet-info p {
@@ -85,23 +106,6 @@
             padding: 5px;
             border-radius: 3px;
             display: inline-block;
-        }
-
-        .btn {
-            display: inline-block;
-            background: #007bff;
-            color: #fff;
-            padding: 10px 20px;
-            margin: 20px 0;
-            text-decoration: none;
-            border-radius: 5px;
-            cursor: pointer;
-            border: none;
-            font-size: 16px;
-        }
-
-        .btn:hover {
-            background: #0056b3;
         }
 
         .footer {
@@ -141,8 +145,12 @@
     <div class="wallet-info">
         <h2>Connect Your Wallet</h2>
         <button id="connectWallet" class="btn">Connect Wallet</button>
-        <p id="walletAddress"></p>
-        <p id="walletBalance"></p>
+        <p id="walletAddress">Wallet Address: Not Connected</p>
+        <p id="walletBalance">Balance: Not Connected</p>
+    </div>
+    <div class="other-content">
+        <h2>Other Content Section</h2>
+        <p>This is where your additional content appears.</p>
     </div>
 </div>
 
@@ -201,7 +209,7 @@
                 // Fetch the Bech32 address directly from the wallet
                 const usedAddresses = await eternlWallet.getUsedAddresses();
                 const address = usedAddresses[0]; // Bech32 address
-                walletAddressDisplay.innerHTML = `Connected Address: <code>${address}</code>`;
+                walletAddressDisplay.innerHTML = `Wallet Address: <code>${address}</code>`;
 
                 // Fetch the balance and convert it to ADA
                 const balanceHex = await eternlWallet.getBalance();
@@ -209,8 +217,8 @@
                 walletBalanceDisplay.innerHTML = `Balance: <strong>${balance.toFixed(2)} ADA</strong>`;
             } catch (error) {
                 console.error('Wallet connection failed:', error);
-                walletAddressDisplay.textContent = 'Failed to connect wallet.';
-                walletBalanceDisplay.textContent = '';
+                walletAddressDisplay.textContent = 'Wallet Address: Failed to connect wallet.';
+                walletBalanceDisplay.textContent = 'Balance: Failed to connect wallet.';
             }
         });
     });
