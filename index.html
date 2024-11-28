@@ -199,16 +199,7 @@
 </div>
 
 <script>
-    // Function to decode a Base64 string to a Uint8Array
-    function base64ToUint8Array(base64) {
-        const raw = atob(base64);
-        const rawLength = raw.length;
-        const array = new Uint8Array(rawLength);
-        for (let i = 0; i < rawLength; i++) {
-            array[i] = raw.charCodeAt(i);
-        }
-        return array;
-    }
+
     /* Particle.js Configuration */
     particlesJS("particles-js", {
         "particles": {
@@ -238,7 +229,16 @@
             }
         }
     });
-
+    // Function to decode a Base64 string to a Uint8Array
+    function base64ToUint8Array(base64) {
+        const raw = atob(base64);
+        const rawLength = raw.length;
+        const array = new Uint8Array(rawLength);
+        for (let i = 0; i < rawLength; i++) {
+            array[i] = raw.charCodeAt(i);
+        }
+        return array;
+    }
     /* Eternl Wallet Connection Logic */
        document.addEventListener('DOMContentLoaded', () => {
         const connectWalletButton = document.getElementById('connectWallet');
@@ -269,10 +269,10 @@
                 const tokenBalances = {};
 
                // Loop through each UTXO
-            utxos.forEach((utxoBase64, index) => {
-                try {
+                utxos.forEach((utxos, index) => {
+                    try {
                         // Decode Base64 into a Uint8Array
-                        const utxoBytes = base64ToUint8Array(utxoBase64);
+                        const utxoBytes = base64ToUint8Array(utxos);
                         console.log(`UTXO ${index} Bytes:`, utxoBytes);
 
                         // Decode CBOR
