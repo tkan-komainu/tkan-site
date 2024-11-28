@@ -257,19 +257,23 @@
                 let adaBalance = 0;
                 const tokenBalances = {};
 
-                  // Loop through each UTXO
-                utxos.forEach((utxoBase64) => {
-                    // Decode Base64 UTXO
-                    const utxoBytes = Uint8Array.from(atob(utxoBase64), (c) => c.charCodeAt(0));
-                    const cbor = CBOR.decode(utxoBytes.buffer); // Convert Uint8Array to ArrayBuffer
+               // Loop through each UTXO
+            utxos.forEach((utxoBase64) => {
+                // Decode Base64 UTXO
+                const utxoBytes = Uint8Array.from(atob(utxoBase64), (c) => c.charCodeAt(0));
+                const utxoBuffer = utxoBytes.buffer; // Convert Uint8Array to ArrayBuffer
+                console.log("utxoBytes ", utxoBytes);
+                console.log("utxoBuffer ", utxoBuffer);
+                
+                try {
+                    // Decode the CBOR
+                    const cbor = CBOR.decode(utxoBuffer);
+                    console.log('Decoded UTXO:', cbor);
 
-                    console.log("CBOR ", cbor);
-                    
-                    // ADA is always the first entry (index 0)
-                    const lovelace = parseInt(cbor[1][0][1]); // ADA in Lovelace
+                    // ADA balance is always the first asset (index 0)
+                    const lovelace = parseInt(cbor[1][0][1], 10); // ADA in Lovelace
                     adaBalance += lovelace;
-                    console.log("Lovelace ", lovelace);
-                    
+
                     // Handle multi-asset tokens (index 1)
                     const assets = cbor[1][1];
                     if (assets) {
@@ -282,30 +286,33 @@
                                     String.fromCharCode(byte)
                                 ).join('');
                                 const key = `${policyHex}.${name}`;
-                                tokenBalances[key] = (tokenBalances[key] || 0) + parseInt(quantity);
+                                tokenBalances[key] = (tokenBalances[key] || 0) + parseInt(quantity, 10);
                             });
                         });
                     }
-                });
+                } catch (decodeError) {
+                    console.error('Failed to decode UTXO:', decodeError);
+                }
+            });
 
-                // Display ADA balance
-                walletBalanceDisplay.innerHTML = `Balance: <strong>${(adaBalance / 1_000_000).toFixed(6)} ADA</strong>`;
+            // Display ADA balance
+            walletBalanceDisplay.innerHTML = `Balance: <strong>${(adaBalance / 1_000_000).toFixed(6)} ADA</strong>`;
 
-                // Display token balances
-                tokenDetailsDisplay.innerHTML = '<h3>Tokens:</h3>';
-                Object.entries(tokenBalances).forEach(([key, quantity]) => {
-                    const [policyId, assetName] = key.split('.');
-                    tokenDetailsDisplay.innerHTML += `
-                        <p><strong>${assetName || 'Unnamed Token'}:</strong> ${quantity} (Policy ID: ${policyId})</p>
-                    `;
-                });
-            } catch (error) {
-                console.error('Wallet connection failed:', error);
-                walletAddressDisplay.textContent = 'Wallet Address: Failed to connect wallet.';
-                walletBalanceDisplay.textContent = 'Balance: Failed to connect wallet.';
-            }
-        });
+            // Display token balances
+            tokenDetailsDisplay.innerHTML = '<h3>Tokens:</h3>';
+            Object.entries(tokenBalances).forEach(([key, quantity]) => {
+                const [policyId, assetName] = key.split('.');
+                tokenDetailsDisplay.innerHTML += `
+                    <p><strong>${assetName || 'Unnamed Token'}:</strong> ${quantity} (Policy ID: ${policyId})</p>
+                `;
+            });
+        } catch (error) {
+            console.error('Wallet connection failed:', error);
+            walletAddressDisplay.textContent = 'Wallet Address: Failed to connect wallet.';
+            walletBalanceDisplay.textContent = 'Balance: Failed to connect wallet.';
+        }
     });
+});
 </script>
 
 </body
