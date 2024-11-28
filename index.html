@@ -228,17 +228,27 @@
             }
         }
     });
-      // Function to decode a hex string to a Uint8Array
-        function hexToUint8Array(hexString) {
-            if (hexString.length % 2 !== 0) {
-                throw new Error('Invalid hex string');
-            }
-            const array = new Uint8Array(hexString.length / 2);
-            for (let i = 0; i < hexString.length; i += 2) {
-                array[i / 2] = parseInt(hexString.substr(i, 2), 16);
-            }
-        return array;
+    /// Function to decode a hex string to a Uint8Array
+    function hexToUint8Array(hexString) {
+        if (hexString.length % 2 !== 0) {
+              throw new Error('Invalid hex string');
         }
+        const array = new Uint8Array(hexString.length / 2);
+        for (let i = 0; i < hexString.length; i += 2) {
+            array[i / 2] = parseInt(hexString.substr(i, 2), 16);
+        }
+        return array;
+    }
+        
+    // Function to convert Uint8Array to hex string
+    function bytesToHex(bytes) {
+          return Array.from(bytes).map(byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+        
+    // Function to convert Uint8Array to UTF-8 string
+    function bytesToString(bytes) {
+          return new TextDecoder().decode(bytes);
+    }
     /* Eternl Wallet Connection Logic */
        document.addEventListener('DOMContentLoaded', () => {
         const connectWalletButton = document.getElementById('connectWallet');
@@ -247,81 +257,95 @@
         const tokenDetailsDisplay = document.getElementById('tokenDetails');
 
         connectWalletButton.addEventListener('click', async () => {
-            try {
-                if (!window.cardano || !window.cardano.eternl) {
-                    throw new Error('Eternl wallet is not available. Please install Eternl wallet.');
-                }
-                console.log("Window.cardano", window.cardano);
-
-                const eternlWallet = await window.cardano.eternl.enable();
-                console.log("Wallet ", eternlWallet);
-                
-                // Get the change Bech32 address
-                const address = await eternlWallet.getChangeAddress();
-                walletAddressDisplay.innerHTML = `Wallet Address: <code>${address}</code>`;
-
-                // Fetch all UTXOs
-                const utxos = await eternlWallet.getUtxos();
-                console.log('UTXOs:', utxos);
-
-                // Parse ADA balance and multi-asset balances
-                let adaBalance = 0;
-                const tokenBalances = {};
-
-               // Loop through each UTXO
-                utxos.forEach((utxoBase64, index) => {
-                    try {
-                        // Decode Base64 into a hexToUint8Array
-                        const utxoBytes = hexToUint8Array(utxoBase64);
-                        console.log(`UTXO ${index} Bytes:`, utxoBytes);
-
-                        // Decode CBOR
-                        const decoded = CBOR.decode(utxoBytes.buffer);
-                        console.log(`Decoded UTXO ${index}:`, decoded);
-
-                        // ADA balance is always the first asset (index 0)
-                        const lovelace = parseInt(decoded[1][0][1], 10); // ADA in Lovelace
-                        adaBalance += lovelace;
-
-                        // Handle multi-asset tokens (index 1)
-                        const assets = decoded[1][1];
-                        if (assets) {
-                            assets.forEach(([policyId, assetList]) => {
-                                assetList.forEach(([assetName, quantity]) => {
-                                    const policyHex = Array.from(policyId, (byte) =>
-                                        byte.toString(16).padStart(2, '0')
-                                    ).join('');
-                                    const name = Array.from(assetName, (byte) =>
-                                        String.fromCharCode(byte)
-                                    ).join('');
-                                    const key = `${policyHex}.${name}`;
-                                    tokenBalances[key] = (tokenBalances[key] || 0) + parseInt(quantity, 10);
-                                });
-                            });
-                        }
-                    } catch (decodeError) {
-                        console.error(`Failed to decode UTXO ${index}:`, decodeError);
-                    }
-                });
-
-                // Display ADA balance
-                walletBalanceDisplay.innerHTML = `Balance: <strong>${(adaBalance / 1_000_000).toFixed(6)} ADA</strong>`;
-
-                // Display token balances
-                tokenDetailsDisplay.innerHTML = '<h3>Tokens:</h3>';
-                Object.entries(tokenBalances).forEach(([key, quantity]) => {
-                    const [policyId, assetName] = key.split('.');
-                    tokenDetailsDisplay.innerHTML += `
-                        <p><strong>${assetName || 'Unnamed Token'}:</strong> ${quantity} (Policy ID: ${policyId})</p>
-                    `;
-                });
-            } catch (error) {
-                console.error('Wallet connection failed:', error);
-                walletAddressDisplay.textContent = 'Wallet Address: Failed to connect wallet.';
-                walletBalanceDisplay.textContent = 'Balance: Failed to connect wallet.';
+        try {
+            if (!window.cardano || !window.cardano.eternl) {
+                throw new Error('Eternl wallet is not available. Please install Eternl wallet.');
             }
-        });
+            console.log("Window.cardano", window.cardano);
+
+            const eternlWallet = await window.cardano.eternl.enable();
+            console.log("Wallet ", eternlWallet);
+            
+            // Get the change Bech32 address
+            const address = await eternlWallet.getChangeAddress();
+            walletAddressDisplay.innerHTML = `Wallet Address: <code>${address}</code>`;
+
+            // Fetch all UTXOs
+            const utxos = await eternlWallet.getUtxos();
+            console.log('UTXOs:', utxos);
+
+            // Parse ADA balance and multi-asset balances
+            let adaBalance = 0;
+            const tokenBalances = {};
+
+            // Loop through each UTXO
+            utxos.forEach((utxoHex, index) => {
+                try {
+                    // Decode hex into a Uint8Array
+                    const utxoBytes = hexToUint8Array(utxoHex);
+                    console.log(`UTXO ${index} Bytes:`, utxoBytes);
+
+                    // Decode CBOR
+                    const decoded = CBOR.decode(utxoBytes.buffer);
+                    console.log(`Decoded UTXO ${index}:`, decoded);
+
+                    // Extract the amount
+                    const amount = decoded[1][1];
+
+                    // Function to parse the amount
+                    function parseAmount(amount) {
+                        if (typeof amount === 'number') {
+                            // Only Lovelace
+                            adaBalance += amount;
+                        } else if (amount instanceof Map) {
+                            amount.forEach((value, key) => {
+                                if (key === 0) {
+                                    // Lovelace
+                                    adaBalance += value;
+                                } else if (key instanceof Uint8Array) {
+                                    // Multi-asset
+                                    const policyId = bytesToHex(key);
+                                    const assets = value;
+                                    assets.forEach((quantity, assetNameBytes) => {
+                                        const assetName = bytesToString(assetNameBytes) || bytesToHex(assetNameBytes);
+                                        const tokenKey = `${policyId}.${assetName}`;
+                                        tokenBalances[tokenKey] = (tokenBalances[tokenKey] || 0) + quantity;
+                                    });
+                                } else {
+                                    console.warn('Unknown key type in amount Map:', key);
+                                }
+                            });
+                        } else {
+                            console.warn('Unknown amount type:', amount);
+                        }
+                    }
+
+                    parseAmount(amount);
+
+                } catch (decodeError) {
+                    console.error(`Failed to decode UTXO ${index}:`, decodeError);
+                }
+            });
+
+            // Display ADA balance
+            walletBalanceDisplay.innerHTML = `Balance: <strong>${(adaBalance / 1_000_000).toFixed(6)} ADA</strong>`;
+
+            // Display token balances
+            tokenDetailsDisplay.innerHTML = '<h3>Tokens:</h3>';
+            Object.entries(tokenBalances).forEach(([key, quantity]) => {
+                const [policyId, assetName] = key.split('.');
+                tokenDetailsDisplay.innerHTML += `
+                    <p><strong>${assetName || 'Unnamed Token'}:</strong> ${quantity} (Policy ID: ${policyId})</p>
+                `;
+            });
+
+        } catch (error) {
+            console.error('Wallet connection failed:', error);
+            walletAddressDisplay.textContent = 'Wallet Address: Failed to connect wallet.';
+            walletBalanceDisplay.textContent = 'Balance: Failed to connect wallet.';
+        }
     });
+});
 </script>
 
 </body
