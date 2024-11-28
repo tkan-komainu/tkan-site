@@ -258,7 +258,7 @@
                 const tokenBalances = {};
 
                // Loop through each UTXO
-            utxos.forEach((utxoBase64) => {
+            utxos.forEach((utxoBase64, index) => {
                 // Decode Base64
                 const utxoBytes = Uint8Array.from(atob(utxoBase64), (c) => c.charCodeAt(0));
                 const utxoBuffer = utxoBytes.buffer;
