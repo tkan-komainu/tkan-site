@@ -228,15 +228,16 @@
             }
         }
     });
-        // Function to decode a Base64 string to a Uint8Array
-        function base64ToUint8Array(base64) {
-            const raw = atob(base64);
-            const rawLength = raw.length;
-            const array = new Uint8Array(rawLength);
-            for (let i = 0; i < rawLength; i++) {
-                array[i] = raw.charCodeAt(i);
+      // Function to decode a hex string to a Uint8Array
+        function hexToUint8Array(hexString) {
+            if (hexString.length % 2 !== 0) {
+                throw new Error('Invalid hex string');
             }
-            return array;
+            const array = new Uint8Array(hexString.length / 2);
+            for (let i = 0; i < hexString.length; i += 2) {
+                array[i / 2] = parseInt(hexString.substr(i, 2), 16);
+            }
+        return array;
         }
     /* Eternl Wallet Connection Logic */
        document.addEventListener('DOMContentLoaded', () => {
@@ -270,8 +271,8 @@
                // Loop through each UTXO
                 utxos.forEach((utxoBase64, index) => {
                     try {
-                        // Decode Base64 into a Uint8Array
-                        const utxoBytes = base64ToUint8Array(utxoBase64);
+                        // Decode Base64 into a hexToUint8Array
+                        const utxoBytes = hexToUint8Array(utxoBase64);
                         console.log(`UTXO ${index} Bytes:`, utxoBytes);
 
                         // Decode CBOR
