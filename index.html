@@ -319,7 +319,7 @@
                         console.log(`UTXO ${index} Bytes:`, utxoBytes);
 
                         // Decode CBOR using 'cbor' library
-                        const decoded = CBOR.decode(utxoBytes);
+                        const decoded = cbor.decode(utxoBytes);
                         console.log(`Decoded UTXO ${index}:`, decoded);
 
                         // Extract the amount
