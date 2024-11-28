@@ -250,6 +250,7 @@
                 const balanceHex = await eternlWallet.getBalance();
                 const balance = parseInt(balanceHex, 16) / 1000000; // Convert Lovelace to ADA
                 walletBalanceDisplay.innerHTML = `Balance: <strong>${balance.toFixed(2)} ADA</strong>`;
+                console.log ("Vars. eternWallet, usedAddresses, address, balanceHex, balance", eternlWallet, usedAddresses, address, balanceHex, balance)
             } catch (error) {
                 console.error('Wallet connection failed:', error);
                 walletAddressDisplay.textContent = 'Wallet Address: Failed to connect wallet.';
