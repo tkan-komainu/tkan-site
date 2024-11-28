@@ -229,7 +229,7 @@
             }
         }
     });
-    // Function to decode a hex string to a Uint8Array
+     // Function to decode a hex string to a Uint8Array
     function hexToUint8Array(hexString) {
         if (hexString.length % 2 !== 0) {
             throw new Error('Invalid hex string');
@@ -281,36 +281,40 @@
                 console.log('UTXOs:', utxos);
 
                 // Parse ADA balance and multi-asset balances
-                let adaBalance = 0;
+                let adaBalance = BigInt(0);
                 const tokenBalances = {};
 
                 // Function to parse the amount
                 function parseAmount(amount) {
                     if (typeof amount === 'number') {
                         // Only Lovelace
-                        adaBalance += amount;
+                        adaBalance += BigInt(amount);
+                    } else if (amount instanceof Array) {
+                        // Amount is an array, process each item
+                        amount.forEach(item => {
+                            parseAmount(item);
+                        });
                     } else if (amount instanceof Map) {
                         amount.forEach((value, key) => {
                             if (typeof key === 'number' && key === 0) {
                                 // Lovelace
-                                adaBalance += value;
+                                adaBalance += BigInt(value);
                             } else if (key instanceof Uint8Array) {
                                 // Multi-asset
                                 const policyId = bytesToHex(key);
                                 const assets = value;
-                                assets.forEach((quantity, assetNameBytes) => {
-                                    const assetName = bytesToString(assetNameBytes) || bytesToHex(assetNameBytes);
-                                    const tokenKey = `${policyId}.${assetName}`;
-                                    tokenBalances[tokenKey] = (tokenBalances[tokenKey] || 0) + quantity;
-                                });
+                                if (assets instanceof Map) {
+                                    assets.forEach((quantity, assetNameBytes) => {
+                                        const assetName = bytesToString(assetNameBytes) || bytesToHex(assetNameBytes);
+                                        const tokenKey = `${policyId}.${assetName}`;
+                                        tokenBalances[tokenKey] = (tokenBalances[tokenKey] || BigInt(0)) + BigInt(quantity);
+                                    });
+                                } else {
+                                    console.warn('Unexpected assets type:', assets);
+                                }
                             } else {
                                 console.warn('Unknown key type in amount Map:', key);
                             }
-                        });
-                    } else if (Array.isArray(amount)) {
-                        // Amount is an array, process each item
-                        amount.forEach(item => {
-                            parseAmount(item);
                         });
                     } else {
                         console.warn('Unknown amount type:', amount);
@@ -324,12 +328,13 @@
                         const utxoBytes = hexToUint8Array(utxoHex);
                         console.log(`UTXO ${index} Bytes:`, utxoBytes);
 
-                        // Decode CBOR using 'cbor' library
-                        const decoded = CBOR.decode(utxoBytes.buffer);
+                        // Decode CBOR using 'cbor-js' library
+                        const decoded = CBOR.decode(utxoBytes);
                         console.log(`Decoded UTXO ${index}:`, decoded);
 
                         // Extract the amount
-                        const amount = decoded[1][1];
+                        const amount = decoded[1][1]; // Adjust the index based on the structure
+                        console.log(`Amount for UTXO ${index}:`, amount);
 
                         // Parse the amount
                         parseAmount(amount);
@@ -340,14 +345,15 @@
                 });
 
                 // Display ADA balance
-                walletBalanceDisplay.innerHTML = `Balance: <strong>${(adaBalance / 1_000_000).toFixed(6)} ADA</strong>`;
+                walletBalanceDisplay.innerHTML = `Balance: <strong>${(Number(adaBalance) / 1_000_000).toFixed(6)} ADA</strong>`;
 
                 // Display token balances
                 tokenDetailsDisplay.innerHTML = '<h3>Tokens:</h3>';
                 Object.entries(tokenBalances).forEach(([key, quantity]) => {
                     const [policyId, assetName] = key.split('.');
+                    const isNFT = (quantity === BigInt(1));
                     tokenDetailsDisplay.innerHTML += `
-                        <p><strong>${assetName || 'Unnamed Token'}:</strong> ${quantity} (Policy ID: ${policyId})</p>
+                        <p><strong>${assetName || 'Unnamed Token'} (${isNFT ? 'NFT' : 'FT'}):</strong> ${quantity.toString()} (Policy ID: ${policyId})</p>
                     `;
                 });
 
