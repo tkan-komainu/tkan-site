@@ -246,7 +246,7 @@
                 console.log("Wallet ", eternlWallet);
                 
                 // Get the change Bech32 address
-                const address = await eternlWallet.getChangeAddress;
+                const address = await eternlWallet.getChangeAddress();
                 walletAddressDisplay.innerHTML = `Wallet Address: <code>${address}</code>`;
 
                 // Fetch all UTXOs
