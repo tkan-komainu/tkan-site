@@ -228,10 +228,11 @@
     });
 
     /* Eternl Wallet Connection Logic */
-    document.addEventListener('DOMContentLoaded', () => {
+       document.addEventListener('DOMContentLoaded', () => {
         const connectWalletButton = document.getElementById('connectWallet');
         const walletAddressDisplay = document.getElementById('walletAddress');
         const walletBalanceDisplay = document.getElementById('walletBalance');
+        const tokenDetailsDisplay = document.getElementById('tokenDetails');
 
         connectWalletButton.addEventListener('click', async () => {
             try {
@@ -241,20 +242,48 @@
 
                 const eternlWallet = await window.cardano.eternl.enable();
 
-                // Fetch the Bech32 address directly from the wallet
-                //const usedAddresses = await eternlWallet.getUsedAddresses();
-                const address = await eternlWallet.getChangeAddress();//usedAddresses[0]; // Bech32 address
+                // Get the used Bech32 address
+                const usedAddresses = await eternlWallet.getUsedAddresses();
+                const address = usedAddresses[0];
                 walletAddressDisplay.innerHTML = `Wallet Address: <code>${address}</code>`;
 
-                // Fetch the balance and convert it to ADA
-                const balanceHex = await eternlWallet.getBalance();
-                const balance = parseInt(balanceHex, 16) / 1000000; // Convert Lovelace to ADA
-                walletBalanceDisplay.innerHTML = `Balance: <strong>${balance.toFixed(2)} ADA</strong>`;
-                console.log("Wallets.cardano", window.cardano);
-                console.log ("eternWallet", eternlWallet);
-                console.log("address", address);
-                console.log("balanceHex", balanceHex);
-                console.log("balance", balance);
+                // Fetch all UTXOs
+                const utxos = await eternlWallet.getUtxos();
+                console.log('UTXOs:', utxos);
+
+                // Parse ADA balance and multi-asset balances
+                let adaBalance = 0;
+                const tokenBalances = {};
+
+                utxos.forEach((utxo) => {
+                    const utxoDecoded = JSON.parse(atob(utxo)); // Decode UTXO from base64
+                    const lovelaceAmount = parseInt(utxoDecoded.output.amount[0].quantity); // ADA in Lovelace
+                    adaBalance += lovelaceAmount;
+
+                    // Handle multi-assets (tokens)
+                    if (utxoDecoded.output.amount.length > 1) {
+                        utxoDecoded.output.amount.slice(1).forEach((asset) => {
+                            const policyId = asset.unit.slice(0, 56);
+                            const assetName = atob(asset.unit.slice(56));
+                            const quantity = parseInt(asset.quantity);
+
+                            const key = `${policyId}.${assetName}`;
+                            tokenBalances[key] = (tokenBalances[key] || 0) + quantity;
+                        });
+                    }
+                });
+
+                // Display ADA balance
+                walletBalanceDisplay.innerHTML = `Balance: <strong>${(adaBalance / 1_000_000).toFixed(6)} ADA</strong>`;
+
+                // Display token details
+                tokenDetailsDisplay.innerHTML = '<h3>Tokens:</h3>';
+                Object.entries(tokenBalances).forEach(([key, quantity]) => {
+                    const [policyId, assetName] = key.split('.');
+                    tokenDetailsDisplay.innerHTML += `
+                        <p><strong>${assetName || 'Unnamed Token'}:</strong> ${quantity} (Policy ID: ${policyId})</p>
+                    `;
+                });
             } catch (error) {
                 console.error('Wallet connection failed:', error);
                 walletAddressDisplay.textContent = 'Wallet Address: Failed to connect wallet.';
