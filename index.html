@@ -130,7 +130,7 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cbor-js"></script>
+    <script src="https://unpkg.com/cbor@8.1.0-web/dist/cbor.js"></script>
 </head>
 <body>
 
@@ -238,7 +238,7 @@
         for (let i = 0; i < hexString.length; i += 2) {
             array[i / 2] = parseInt(hexString.substr(i, 2), 16);
         }
-        return array;
+    return array;
     }
 
     // Function to convert Uint8Array to hex string
@@ -251,7 +251,38 @@
         return new TextDecoder().decode(bytes);
     }
 
-    /* Eternl Wallet Connection Logic */
+    function parseAmount(amount) {
+        if (typeof amount === 'number') {
+            // Only Lovelace
+            adaBalance += amount;
+        } else if (amount instanceof Map) {
+            amount.forEach((value, key) => {
+                if (typeof key === 'number' && key === 0) {
+                    // Lovelace
+                    adaBalance += value;
+                } else if (key instanceof Uint8Array) {
+                    // Multi-asset
+                    const policyId = bytesToHex(key);
+                    const assets = value;
+                    assets.forEach((quantity, assetNameBytes) => {
+                        const assetName = bytesToString(assetNameBytes) || bytesToHex(assetNameBytes);
+                        const tokenKey = `${policyId}.${assetName}`;
+                        tokenBalances[tokenKey] = (tokenBalances[tokenKey] || 0) + quantity;
+                    });
+                } else {
+                    console.warn('Unknown key type in amount Map:', key);
+                }
+            });
+        } else if (Array.isArray(amount)) {
+            // Amount is an array, process each item
+            amount.forEach(item => {
+                parseAmount(item);
+            });
+        } else {
+            console.warn('Unknown amount type:', amount);
+        }
+    }
+/* Eternl Wallet Connection Logic */
     document.addEventListener('DOMContentLoaded', () => {
         const connectWalletButton = document.getElementById('connectWallet');
         const walletAddressDisplay = document.getElementById('walletAddress');
@@ -287,46 +318,14 @@
                         const utxoBytes = hexToUint8Array(utxoHex);
                         console.log(`UTXO ${index} Bytes:`, utxoBytes);
 
-                        // Decode CBOR
-                        const decoded = CBOR.decode(utxoBytes.buffer);
+                        // Decode CBOR using 'cbor' library
+                        const decoded = CBOR.decode(utxoBytes);
                         console.log(`Decoded UTXO ${index}:`, decoded);
 
                         // Extract the amount
                         const amount = decoded[1][1];
 
-                        // Function to parse the amount
-                        function parseAmount(amount) {
-                            if (typeof amount === 'number') {
-                                // Only Lovelace
-                                adaBalance += amount;
-                            } else if (amount instanceof Map) {
-                                amount.forEach((value, key) => {
-                                    if (key === 0) {
-                                        // Lovelace
-                                        adaBalance += value;
-                                    } else if (key instanceof Uint8Array) {
-                                        // Multi-asset
-                                        const policyId = bytesToHex(key);
-                                        const assets = value;
-                                        assets.forEach((quantity, assetNameBytes) => {
-                                            const assetName = bytesToString(assetNameBytes) || bytesToHex(assetNameBytes);
-                                            const tokenKey = `${policyId}.${assetName}`;
-                                            tokenBalances[tokenKey] = (tokenBalances[tokenKey] || 0) + quantity;
-                                        });
-                                    } else {
-                                        console.warn('Unknown key type in amount Map:', key);
-                                    }
-                                });
-                            } else if (Array.isArray(amount)) {
-                                // Amount is an array, process each item
-                                amount.forEach(item => {
-                                    parseAmount(item);
-                                });
-                            } else {
-                                console.warn('Unknown amount type:', amount);
-                            }
-                        }
-
+                        // Parse the amount
                         parseAmount(amount);
 
                     } catch (decodeError) {
