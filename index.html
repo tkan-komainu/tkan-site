@@ -261,7 +261,8 @@
                 utxos.forEach((utxoBase64) => {
                     // Decode Base64 UTXO
                     const utxoBytes = Uint8Array.from(atob(utxoBase64), (c) => c.charCodeAt(0));
-                    const cbor = CBOR.decode(utxoBytes);
+                    const cbor = CBOR.decode(utxoBytes.buffer); // Convert Uint8Array to ArrayBuffer
+
                     console.log("CBOR ", cbor);
                     
                     // ADA is always the first entry (index 0)
