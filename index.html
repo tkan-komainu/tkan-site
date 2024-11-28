@@ -242,15 +242,19 @@
                 const eternlWallet = await window.cardano.eternl.enable();
 
                 // Fetch the Bech32 address directly from the wallet
-                const usedAddresses = await eternlWallet.getUsedAddresses();
-                const address = usedAddresses[0]; // Bech32 address
+                //const usedAddresses = await eternlWallet.getUsedAddresses();
+                const address = await eternlWallet.getChangeAddress();//usedAddresses[0]; // Bech32 address
                 walletAddressDisplay.innerHTML = `Wallet Address: <code>${address}</code>`;
 
                 // Fetch the balance and convert it to ADA
                 const balanceHex = await eternlWallet.getBalance();
                 const balance = parseInt(balanceHex, 16) / 1000000; // Convert Lovelace to ADA
                 walletBalanceDisplay.innerHTML = `Balance: <strong>${balance.toFixed(2)} ADA</strong>`;
-                console.log ("Vars. eternWallet, usedAddresses, address, balanceHex, balance", eternlWallet, usedAddresses, address, balanceHex, balance)
+                console.log("Wallets.cardano", window.cardano);
+                console.log ("eternWallet", eternlWallet);
+                console.log("address", address);
+                console.log("balanceHex", balanceHex);
+                console.log("balance", balance);
             } catch (error) {
                 console.error('Wallet connection failed:', error);
                 walletAddressDisplay.textContent = 'Wallet Address: Failed to connect wallet.';
