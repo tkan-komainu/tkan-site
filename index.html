@@ -286,10 +286,10 @@
 
                 // Function to parse the amount
                 function parseAmount(amount) {
-                    if (typeof amount === 'number') {
+                    if (typeof amount === 'number' || typeof amount === 'bigint') {
                         // Only Lovelace
                         adaBalance += BigInt(amount);
-                    } else if (amount instanceof Array) {
+                    } else if (Array.isArray(amount)) {
                         // Amount is an array, process each item
                         amount.forEach(item => {
                             parseAmount(item);
@@ -328,12 +328,15 @@
                         const utxoBytes = hexToUint8Array(utxoHex);
                         console.log(`UTXO ${index} Bytes:`, utxoBytes);
 
+                        // Create a proper ArrayBuffer
+                        const arrayBuffer = utxoBytes.buffer.slice(utxoBytes.byteOffset, utxoBytes.byteOffset + utxoBytes.byteLength);
+
                         // Decode CBOR using 'cbor-js' library
-                        const decoded = CBOR.decode(utxoBytes);
+                        const decoded = CBOR.decode(arrayBuffer);
                         console.log(`Decoded UTXO ${index}:`, decoded);
 
                         // Extract the amount
-                        const amount = decoded[1][1]; // Adjust the index based on the structure
+                        const amount = decoded[1][1];
                         console.log(`Amount for UTXO ${index}:`, amount);
 
                         // Parse the amount
