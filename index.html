@@ -259,16 +259,18 @@
 
                // Loop through each UTXO
             utxos.forEach((utxoBase64) => {
-                // Decode Base64 UTXO
+                // Decode Base64
                 const utxoBytes = Uint8Array.from(atob(utxoBase64), (c) => c.charCodeAt(0));
-                const utxoBuffer = utxoBytes.buffer; // Convert Uint8Array to ArrayBuffer
-                console.log("utxoBytes ", utxoBytes);
-                console.log("utxoBuffer ", utxoBuffer);
+                const utxoBuffer = utxoBytes.buffer;
+
+                // Log decoded bytes
+                console.log(`UTXO ${index} Bytes:`, utxoBytes);
+                console.log(`UTXO ${index} Buffer:`, utxoBuffer);
                 
                 try {
-                    // Decode the CBOR
-                    const cbor = CBOR.decode(utxoBuffer);
-                    console.log('Decoded UTXO:', cbor);
+                    // Decode CBOR
+                    const decoded = CBOR.decode(utxoBuffer);
+                    console.log(`Decoded UTXO ${index}:`, decoded);
 
                     // ADA balance is always the first asset (index 0)
                     const lovelace = parseInt(cbor[1][0][1], 10); // ADA in Lovelace
