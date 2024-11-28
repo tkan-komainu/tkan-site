@@ -128,9 +128,112 @@
         .social a:hover {
             text-decoration: underline;
         }
+
+        .token-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1em;
+        }
+
+        .token-table th,
+        .token-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .token-table th {
+            background-color: #f5f5f5;
+        }
+
+        .token-table td.text-right {
+            text-align: right;
+        }
+
+        .token-table tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .token-table small {
+            color: #666;
+            font-family: monospace;
+        }
+
+        .wallet-balance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .balance-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .token-table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        .token-table {
+            width: 100%;
+            min-width: 600px; /* Ensures table doesn't get too squeezed */
+            border-collapse: collapse;
+        }
+
+        .token-table th,
+        .token-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            white-space: nowrap; /* Prevents text wrapping */
+        }
+
+        .token-table td:nth-child(2) {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .token-table th {
+            background-color: #f5f5f5;
+            position: sticky;
+            top: 0;
+        }
+
+        .token-table td.text-right {
+            text-align: right;
+        }
+
+        .token-table tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .token-table small {
+            color: #666;
+            font-family: monospace;
+        }
+
+        @media (max-width: 768px) {
+            .wallet-balance-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .wallet-balance-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cbor-js"></script>
+    <script src="https://unpkg.com/@emurgo/cardano-serialization-lib-asmjs@11.5.0/cardano_serialization_lib.js"></script>
 </head>
 <body>
 
@@ -230,15 +333,16 @@
         }
     });
      // Function to decode a hex string to a Uint8Array
-    function hexToUint8Array(hexString) {
-        if (hexString.length % 2 !== 0) {
-            throw new Error('Invalid hex string');
+    function hexToUint8Array(hex) {
+        if (!/^[0-9a-fA-F]*$/.test(hex) || hex.length % 2 !== 0) {
+            console.error('Invalid hex string:', hex);
+            return new Uint8Array(); // Return an empty array if invalid
         }
-        const array = new Uint8Array(hexString.length / 2);
-        for (let i = 0; i < hexString.length; i += 2) {
-            array[i / 2] = parseInt(hexString.substr(i, 2), 16);
+        const byteArray = new Uint8Array(hex.length / 2);
+        for (let i = 0; i < hex.length; i += 2) {
+            byteArray[i / 2] = parseInt(hex.substr(i, 2), 16);
         }
-        return array;
+        return byteArray;
     }
 
     // Function to convert Uint8Array to hex string
@@ -249,9 +353,353 @@
     // Function to convert Uint8Array to UTF-8 string
     function bytesToString(bytes) {
         try {
-            return new TextDecoder().decode(bytes);
+            const text = new TextDecoder('utf-8').decode(bytes);
+            return text; // Return the decoded text
+        } catch (error) {
+            console.error('Error decoding bytes to string:', error);
+            return ''; // Return an empty string if decoding fails
+        }
+    }
+
+    function tryDecodeMultipartName(hex) {
+        try {
+            // Skip the map marker
+            let pos = 2;
+            const parts = [];
+            
+            while (pos < hex.length) {
+                // Look for string markers
+                if (hex.substr(pos, 2) === '58') {
+                    const len = parseInt(hex.substr(pos + 2, 2), 16);
+                    const strHex = hex.substr(pos + 4, len * 2);
+                    const text = new TextDecoder().decode(hexToUint8Array(strHex));
+                    if (/^[\x20-\x7E]*$/.test(text)) {
+                        parts.push(text);
+                    }
+                    pos += 4 + (len * 2);
+                } else {
+                    pos += 2;
+                }
+            }
+            
+            return parts.length > 0 ? parts.join(' ') : null;
         } catch {
-            return bytesToHex(bytes);
+            return null;
+        }
+    }
+
+    // Helper function to convert byte array to hex string
+    function toHex(byteArray) {
+        if (Array.isArray(byteArray)) {
+            return Array.from(byteArray, byte => byte.toString(16).padStart(2, '0')).join('');
+        }
+        return byteArray;
+    }
+
+    // Helper function to try to decode asset name from hex
+    function tryDecodeAssetName(hexString) {
+        try {
+            // Remove any non-hex characters
+            const cleanHex = hexString.replace(/[^0-9a-fA-F]/g, '');
+            // Convert hex to bytes
+            const bytes = new Uint8Array(cleanHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            // Try to decode as UTF-8
+            return new TextDecoder().decode(bytes);
+        } catch (error) {
+            return hexString; // Return original if decode fails
+        }
+    }
+
+    function hasTokens(value) {
+        return typeof value === 'object' && value !== null && Object.keys(value).length > 1;
+    }
+
+    function extractTokens(hexString) {
+        const tokens = [];
+        // Look for token sections starting with '581c'
+        let pos = hexString.indexOf('581c');
+        
+        while (pos !== -1) {
+            try {
+                // Extract policy ID (56 chars after 581c)
+                const policyId = hexString.substring(pos + 4, pos + 60);
+                
+                // Find token name (starts after policy ID)
+                let nameStart = pos + 60;
+                // Skip to actual token data
+                while (nameStart < hexString.length && 
+                       (hexString.substring(nameStart, nameStart + 2) === '01' || 
+                        hexString.substring(nameStart, nameStart + 2) === 'a1')) {
+                    nameStart += 2;
+                }
+                
+                // Extract token name until next marker or end
+                let nameEnd = hexString.indexOf('581c', nameStart);
+                if (nameEnd === -1) nameEnd = hexString.length;
+                
+                const tokenName = hexString.substring(nameStart, nameEnd);
+                
+                tokens.push({
+                    policyId: policyId,
+                    name: tokenName
+                });
+            } catch (error) {
+                console.error('Error extracting token:', error);
+            }
+            
+            // Find next token section
+            pos = hexString.indexOf('581c', pos + 4);
+        }
+        
+        return tokens;
+    }
+
+    function processUtxos(utxos) {
+        let totalAdaBalance = 0;
+        let availableAdaBalance = 0;
+        let lockedAdaBalance = 0;
+        let collateralBalance = 0;
+        let tokenFragBalance = 0;
+        let boundToTokens = 0;
+        let tokenBalances = new Map();
+
+        utxos.forEach((utxoHex, index) => {
+            try {
+                const result = decodeUtxo(utxoHex);
+                
+                // ADA balance processing
+                if (result.ada) {
+                    totalAdaBalance += result.ada;
+                    if (result.tokens.length === 0) {
+                        if (Math.abs(result.ada - 5) < 0.1) {
+                            collateralBalance += result.ada;
+                        } else {
+                            availableAdaBalance += result.ada;
+                        }
+                    } else {
+                        boundToTokens += result.ada;
+                    }
+                }
+                
+                // Token processing
+                result.tokens.forEach(token => {
+                    const policyId = token.policyId;
+                    const decodedName = bytesToString(hexToUint8Array(token.name));
+                    const key = `${policyId}:${token.name}:${decodedName}`;
+                    
+                    const tokenAmount = extractTokenAmount(utxoHex, policyId, token.name);
+                    const currentAmount = tokenBalances.get(key) || 0;
+                    tokenBalances.set(key, currentAmount + tokenAmount);
+                });
+            } catch (error) {
+                console.error(`Error processing UTXO ${index}:`, error);
+            }
+        });
+
+        // Update displays with corrected balances
+        updateWalletDisplay(
+            totalAdaBalance,
+            availableAdaBalance,
+            lockedAdaBalance,
+            collateralBalance,
+            tokenFragBalance,
+            boundToTokens
+        );
+
+        updateTokenDisplay(tokenBalances);
+    }
+
+    function updateTokenDisplay(tokenBalances) {
+        const tokenDetailsDisplay = document.getElementById('tokenDetails');
+        let tokenHtml = '<h3>Tokens:</h3><div class="token-table-container">';
+        
+        if (tokenBalances.size > 0) {
+            tokenHtml += `
+            <table class="token-table">
+                <thead>
+                    <tr>
+                        <th>Policy ID</th>
+                        <th>Token Name</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            
+            tokenBalances.forEach((amount, key) => {
+                const [policyId, hexName, decodedName] = key.split(':');
+                tokenHtml += `
+                    <tr>
+                        <td>${policyId}</td>
+                        <td>${decodedName}</td>
+                        <td>${amount}</td>
+                    </tr>`;
+            });
+            
+            tokenHtml += '</tbody></table>';
+        } else {
+            tokenHtml += '<p>No tokens found.</p>';
+        }
+        
+        tokenHtml += '</div>';
+        tokenDetailsDisplay.innerHTML = tokenHtml;
+    }
+
+    function updateWalletDisplay(totalAda, availableAda, lockedAda, collateralAda, tokenFragAda, boundToTokens) {
+        const walletBalanceDisplay = document.getElementById('walletBalance');
+        walletBalanceDisplay.innerHTML = `
+            <div class="wallet-balance-grid">
+                <div class="balance-item">
+                    <strong>Total Balance:</strong><br/>
+                    ${totalAda.toFixed(6)} ₳
+                </div>
+                <div class="balance-item">
+                    <strong>Available:</strong><br/>
+                    ${(availableAda - collateralAda).toFixed(6)} ₳
+                </div>
+                <div class="balance-item">
+                    <strong>Locked:</strong><br/>
+                    ${lockedAda.toFixed(6)} ₳
+                </div>
+                <div class="balance-item">
+                    <strong>Collateral:</strong><br/>
+                    ${collateralAda.toFixed(6)} ₳
+                </div>
+                <div class="balance-item">
+                    <strong>Bound to tokens:</strong><br/>
+                    ${boundToTokens.toFixed(6)} ₳
+                </div>
+                <div class="balance-item">
+                    <strong>Token Fragmentation:</strong><br/>
+                    ${tokenFragAda.toFixed(6)} ₳
+                </div>
+            </div>`;
+    }
+
+    function decodeUtxo(utxoHex) {
+        try {
+            // ADA amount extraction
+            const lovelaceMatch = utxoHex.match(/821a([0-9a-f]{8})/);
+            let lovelaceAmount = 0;
+            
+            if (lovelaceMatch) {
+                lovelaceAmount = parseInt(lovelaceMatch[1], 16) / 1_000_000;
+            }
+            
+            // Token extraction
+            const tokens = [];
+            let pos = 0;
+            
+            while ((pos = utxoHex.indexOf('581c', pos)) !== -1) {
+                try {
+                    const policyId = utxoHex.substring(pos + 4, pos + 60);
+                    let nameStart = pos + 60;
+                    
+                    // Skip CBOR markers
+                    while (nameStart < utxoHex.length && 
+                           (utxoHex.substring(nameStart, nameStart + 2) === '01' || 
+                            utxoHex.substring(nameStart, nameStart + 2) === 'a1')) {
+                        nameStart += 2;
+                    }
+                    
+                    let nameEnd = utxoHex.indexOf('581c', nameStart);
+                    if (nameEnd === -1) nameEnd = utxoHex.length;
+                    
+                    // Directly extract the token name without hex conversion
+                    const tokenName = utxoHex.substring(nameStart, nameEnd);
+                    
+                    tokens.push({
+                        policyId: policyId,
+                        name: tokenName // Use the extracted name directly
+                    });
+                } catch (error) {
+                    console.error('Error extracting token:', error);
+                }
+                pos += 4;
+            }
+
+            return {
+                ada: lovelaceAmount,
+                tokens
+            };
+        } catch (error) {
+            console.error('Error decoding UTXO:', error);
+            return { ada: 0, tokens: [] };
+        }
+    }
+
+    function hexToAscii(hex) {
+        try {
+            let ascii = '';
+            for (let i = 0; i < hex.length; i += 2) {
+                const charCode = parseInt(hex.substr(i, 2), 16);
+                // Only include printable ASCII characters
+                if (charCode >= 32 && charCode <= 126) {
+                    ascii += String.fromCharCode(charCode);
+                }
+            }
+            return ascii;
+        } catch (error) {
+            console.error('Error converting hex to ASCII:', error);
+            return '';
+        }
+    }
+
+    async function getWalletUtxos(wallet) {
+        try {
+            // Get all UTXOs from the wallet
+            const utxos = await wallet.getUtxos();
+            console.log("Total UTXOs fetched:", utxos.length);
+            return utxos;
+        } catch (error) {
+            console.error("Error fetching UTXOs:", error);
+            return [];
+        }
+    }
+
+    // Add this new function for amount extraction
+    function extractTokenAmount(utxoHex, policyId, assetName) {
+        try {
+            const pattern = `${policyId}${assetName}`;
+            const pos = utxoHex.indexOf(pattern);
+            
+            if (pos !== -1) {
+                let amountPos = pos + pattern.length;
+                
+                // Skip any CBOR map markers
+                while (amountPos < utxoHex.length && 
+                       (utxoHex.substr(amountPos, 2) === 'a1' || 
+                        utxoHex.substr(amountPos, 2) === 'a2')) {
+                    amountPos += 2;
+                }
+                
+                const marker = utxoHex.substr(amountPos, 2);
+                
+                // CBOR integer encoding patterns
+                if (marker === '1a') {  // 4-byte integer
+                    return parseInt(utxoHex.substr(amountPos + 2, 8), 16);
+                } else if (marker === '19') {  // 2-byte integer
+                    return parseInt(utxoHex.substr(amountPos + 2, 4), 16);
+                } else if (marker === '18') {  // 1-byte integer
+                    return parseInt(utxoHex.substr(amountPos + 2, 2), 16);
+                } else if (marker === '01') {  // NFT (amount = 1)
+                    return 1;
+                } else if (marker === '58') {  // String marker
+                    const strLen = parseInt(utxoHex.substr(amountPos + 2, 2), 16);
+                    const nextPos = amountPos + 4 + (strLen * 2);
+                    const nextMarker = utxoHex.substr(nextPos, 2);
+                    if (nextMarker === '1a') {
+                        return parseInt(utxoHex.substr(nextPos + 2, 8), 16);
+                    } else if (nextMarker === '19') {
+                        return parseInt(utxoHex.substr(nextPos + 2, 4), 16);
+                    }
+                }
+                
+                console.log('Token marker:', marker, 'for token:', assetName);
+            }
+            return 1;  // Default to 1 if pattern not found
+        } catch (error) {
+            console.error('Error extracting token amount:', error);
+            return 1;
         }
     }
 
@@ -264,109 +712,27 @@
 
         connectWalletButton.addEventListener('click', async () => {
             try {
-                if (!window.cardano || !window.cardano.eternl) {
-                    throw new Error('Eternl wallet is not available. Please install Eternl wallet.');
-                }
-                console.log("Window.cardano", window.cardano);
-
-                const eternlWallet = await window.cardano.eternl.enable();
-                console.log("Wallet ", eternlWallet);
+                const wallet = await window.cardano.eternl.enable();
+                console.log("Wallet ", wallet);
                 
-                // Get the change Bech32 address
-                const address = await eternlWallet.getChangeAddress();
-                walletAddressDisplay.innerHTML = `Wallet Address: <code>${address}</code>`;
-
-                // Fetch all UTXOs
-                const utxos = await eternlWallet.getUtxos();
-                console.log('UTXOs:', utxos);
-
-                // Parse ADA balance and multi-asset balances
-                let adaBalance = BigInt(0);
-                const tokenBalances = {};
-
-                // Function to parse the amount
-                function parseAmount(amount) {
-                    if (typeof amount === 'number' || typeof amount === 'bigint') {
-                        // Only Lovelace
-                        adaBalance += BigInt(amount);
-                    } else if (Array.isArray(amount)) {
-                        // Amount is an array, process each item
-                        amount.forEach(item => {
-                            parseAmount(item);
-                        });
-                    } else if (amount instanceof Map) {
-                        amount.forEach((value, key) => {
-                            if (typeof key === 'number' && key === 0) {
-                                // Lovelace
-                                adaBalance += BigInt(value);
-                            } else if (key instanceof Uint8Array) {
-                                // Multi-asset
-                                const policyId = bytesToHex(key);
-                                const assets = value;
-                                if (assets instanceof Map) {
-                                    assets.forEach((quantity, assetNameBytes) => {
-                                        const assetName = bytesToString(assetNameBytes) || bytesToHex(assetNameBytes);
-                                        const tokenKey = `${policyId}.${assetName}`;
-                                        tokenBalances[tokenKey] = (tokenBalances[tokenKey] || BigInt(0)) + BigInt(quantity);
-                                    });
-                                } else {
-                                    console.warn('Unexpected assets type:', assets);
-                                }
-                            } else {
-                                console.warn('Unknown key type in amount Map:', key);
-                            }
-                        });
-                    } else {
-                        console.warn('Unknown amount type:', amount);
-                    }
-                }
-
-                // Loop through each UTXO
-                utxos.forEach((utxoHex, index) => {
-                    try {
-                        // Decode hex into a Uint8Array
-                        const utxoBytes = hexToUint8Array(utxoHex);
-                        console.log(`UTXO ${index} Bytes:`, utxoBytes);
-
-                        // Create a proper ArrayBuffer
-                        const arrayBuffer = utxoBytes.buffer.slice(utxoBytes.byteOffset, utxoBytes.byteOffset + utxoBytes.byteLength);
-
-                        // Decode CBOR using 'cbor-js' library
-                        const decoded = CBOR.decode(arrayBuffer);
-                        console.log(`Decoded UTXO ${index}:`, decoded);
-
-                        // Extract the amount
-                        const amount = decoded[1][1];
-                        console.log(`Amount for UTXO ${index}:`, amount);
-
-                        // Parse the amount
-                        parseAmount(amount);
-
-                    } catch (decodeError) {
-                        console.error(`Failed to decode UTXO ${index}:`, decodeError);
-                    }
-                });
-
-                // Display ADA balance
-                walletBalanceDisplay.innerHTML = `Balance: <strong>${(Number(adaBalance) / 1_000_000).toFixed(6)} ADA</strong>`;
-
-                // Display token balances
-                tokenDetailsDisplay.innerHTML = '<h3>Tokens:</h3>';
-                Object.entries(tokenBalances).forEach(([key, quantity]) => {
-                    const [policyId, assetName] = key.split('.');
-                    const isNFT = (quantity === BigInt(1));
-                    tokenDetailsDisplay.innerHTML += `
-                        <p><strong>${assetName || 'Unnamed Token'} (${isNFT ? 'NFT' : 'FT'}):</strong> ${quantity.toString()} (Policy ID: ${policyId})</p>
-                    `;
-                });
-
+                // Get UTXOs
+                const utxos = await getWalletUtxos(wallet);
+                console.log("UTXOs:", utxos);
+                
+                // Process UTXOs
+                processUtxos(utxos);
+                
+                // Update address display
+                const addresses = await wallet.getUsedAddresses();
+                const addr = addresses[0];
+                walletAddressDisplay.textContent = 
+                    `Wallet Address: ${addr.substring(0, 20)}...${addr.substring(addr.length - 8)}`;
+                
             } catch (error) {
-                console.error('Wallet connection failed:', error);
-                walletAddressDisplay.textContent = 'Wallet Address: Failed to connect wallet.';
-                walletBalanceDisplay.textContent = 'Balance: Failed to connect wallet.';
+                console.error("Error connecting wallet:", error);
             }
         });
     });
 </script>
 
-</body
+</body>
