@@ -250,6 +250,73 @@
         .token-table tr:hover {
             background-color: #f9f9f9;
         }
+
+        .wallet-selection {
+            position: absolute; /* Position it as needed */
+            background: white;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000; /* Ensure it appears above other elements */
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .wallet-item {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        .wallet-item:hover {
+            background-color: #f0f0f0; /* Highlight on hover */
+        }
+
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .wallet-item {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        .wallet-item:hover {
+            background-color: #f0f0f0; /* Highlight on hover */
+        }
     </style>
     <!-- Include Particle.js -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
@@ -266,7 +333,7 @@
 </header>
 
 <div class="container">
-    <a href="#send-tokens" class="send-tokens-btn">Send Tokens</a>
+    <a href="#send-tokens" class="send-tokens-btn">Choose your Trash Tokens</a>
 
     <div class="story">
         <h2>Our Mission</h2>
@@ -292,7 +359,7 @@
             If you send more ADA than the required minimum, you'll receive our exclusive <strong>FAN Token</strong> as a reward, allowing you to show your pride as a
             "LION of Cardano" who is helping to maintain a clean ecosystem.
         </p>
-        <a class="btn" href="#send-tokens">Send Your Tokens Now</a>
+        <a class="btn" href="#send-tokens">Send Your selected Tokens Now</a>
     </div>
 
     <div id="send-tokens">
@@ -310,8 +377,6 @@
         <h2>Connect Your Wallet</h2>
         <button id="connectWallet" class="btn">Connect Wallet</button>
         <p id="walletAddress">Wallet Address: Not Connected</p>
-        <div id="walletBalance">Balance: Not Connected</div>
-        <div id="tokenDetails">Tokens: Not yet Available</div>
     </div>
     <div class="balances" id="balances" style="display: none;">
         <h2>Balances</h2>
@@ -341,6 +406,14 @@
     <p>&copy; 2024 TKAN.io - All Rights Reserved</p>
     <div class="social">
         <p>Follow us on <a href="https://x.com/TKan_Komainu" target="_blank">@TKan_Komainu</a></p>
+    </div>
+</div>
+
+<div id="walletModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-button" id="closeModal">&times;</span>
+        <h2>Select a Wallet</h2>
+        <div id="walletList"></div>
     </div>
 </div>
 
@@ -402,15 +475,6 @@ function arrayToHex(byteArray) {
 }
 
 /**
- * Converts a Uint8Array to a hex string.
- * @param {Uint8Array} bytes
- * @returns {string}
- */
-function bytesToHex(bytes) {
-    return Array.from(bytes).map(byte => byte.toString(16).padStart(2, '0')).join('');
-}
-
-/**
  * Converts a Uint8Array to a UTF-8 string.
  * @param {Uint8Array} bytes
  * @returns {string}
@@ -423,59 +487,6 @@ function bytesToString(bytes) {
         console.error('Error decoding bytes to string:', error);
         return ''; // Return an empty string if decoding fails
     }
-}
-
-/**
- * Converts a Uint8Array to a fresh ArrayBuffer without offsets.
- * @param {Uint8Array} u8a
- * @returns {ArrayBuffer}
- */
-function toArrayBuffer(u8a) {
-    const ab = new ArrayBuffer(u8a.length);
-    const view = new Uint8Array(ab);
-    for (let i = 0; i < u8a.length; ++i) {
-        view[i] = u8a[i];
-    }
-    return ab;
-}
-
-/**
- * Parses the amount structure from the decoded UTXO.
- * @param {any} amount - The amount field from the decoded UTXO.
- * @param {Object} tokenBalances - The map to accumulate token balances.
- * @returns {BigInt} - The ADA balance in Lovelace.
- */
- function parseAmount(amountData) {
-    let amount = {};
-
-    if (typeof amountData === 'number' || typeof amountData === 'bigint') {
-        // Lovelace amount
-        amount['lovelace'] = BigInt(amountData);
-    } else if (typeof amountData === 'object') {
-        for (let [policy, assets] of Object.entries(amountData)) {
-            // Convert policy ID if it's an array
-            let policyId;
-            if (Array.isArray(policy)) {
-                policyId = arrayToHex(policy);
-            } else {
-                policyId = policy;
-            }
-
-            for (let [assetName, quantity] of Object.entries(assets)) {
-                // Convert asset name if it's an array
-                let assetNameHex;
-                if (Array.isArray(assetName)) {
-                    assetNameHex = arrayToHex(assetName);
-                } else {
-                    assetNameHex = assetName;
-                }
-
-                const unit = policyId + assetNameHex;
-                amount[unit] = BigInt(quantity);
-            }
-        }
-    }
-    return amount;
 }
 
 // Function to convert Uint8Array to hex string
@@ -494,19 +505,19 @@ function uint8ArrayToHex(uint8Array) {
     const utxoBytes = hexToUint8Array(utxoHex);
     //console.log('UTXO Bytes:', utxoBytes);
     const utxo = CBOR.decode(utxoBytes.buffer);
-    console.log('Decoded UTXO:', utxo);
+    //console.log('Decoded UTXO:', utxo);
 
     const [txInput, output] = utxo;
     const [txHash, txIndex] = txInput;
 
     // Log the transaction input and output
     console.log('Transaction Input:', txInput);
-    console.log('Transaction Hash:', txHash);
-    console.log('Transaction Index:', txIndex);
+    //console.log('Transaction Hash:', txHash);
+    //console.log('Transaction Index:', txIndex);
     console.log('UTXO Output:', output);
     const [outputHash, tokenArray] = output;
-    console.log('Output Hash:', outputHash);
-    console.log('Token Array:', tokenArray);
+    //console.log('Output Hash:', outputHash);
+    //console.log('Token Array:', tokenArray);
 
     // Extract ADA amount
     let adaAmountArray = BigInt(0);
@@ -549,7 +560,7 @@ function uint8ArrayToHex(uint8Array) {
                         // Log token details
                         console.log(`Token Policy ID: ${policyId}`);
                         console.log(`Token Asset Name: ${assetName}`);
-                        console.log(`Token Quantity (BigInt): ${tokenBalances[tokenKey]}`);
+                        console.log(`Token Quantity: ${tokenBalances[tokenKey]}`);
                     }
                 }
             }
@@ -623,7 +634,9 @@ function displayBalances(available, locked, collateral, tokenBalances) {
         row.appendChild(nameCell);
 
         const policyCell = document.createElement('td');
-        const policyIdHex = uint8ArrayToHex(policyId); // Policy ID
+        //console.log("PolicyId in Array", policyId);
+        const policyIdHex = uint8ArrayToHex(policyIdByte); // Policy ID
+        //console.log("PolicyId in Hex", policyIdHex);
         const truncatedPolicyID = `${policyIdHex.slice(0, 20)}...${policyIdHex.slice(-8)}`
         policyCell.innerText = truncatedPolicyID
 ,        row.appendChild(policyCell);
@@ -636,66 +649,80 @@ function displayBalances(available, locked, collateral, tokenBalances) {
     }
 }
 
-// Function to convert hex to ASCII
-function hexToAscii(hex) {
-    let str = '';
-    for (let i = 0; i < hex.length; i += 2) {
-        str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
-    }
-    return str;
+function showWalletSelection() {
+    const walletModal = document.getElementById('walletModal');
+    const walletList = document.getElementById('walletList');
+    walletList.innerHTML = ''; // Clear previous wallet items
+
+    // Check for available wallets in window.cardano
+    const wallets = Object.keys(window.cardano); // Get the keys of the cardano object
+
+    wallets.forEach(walletKey => {
+        const wallet = window.cardano[walletKey]; // Get the wallet object
+
+        // Check if the wallet has an enable function and an icon
+        if (wallet.enable && wallet.icon) {
+            const walletItem = document.createElement('div');
+            walletItem.className = 'wallet-item';
+            walletItem.innerHTML = `
+                <img src="${wallet.icon}" alt="${walletKey} Logo" style="width: 30px; height: 30px; margin-right: 10px;">
+                <span>${walletKey}</span>
+            `;
+
+            walletItem.onclick = async () => {
+                try {
+                    const walletInstance = await wallet.enable(); // Connect to the wallet
+                    console.log("Connected to:", walletKey);
+                    
+                    // Proceed with fetching addresses and UTXOs
+                    const addresses = await walletInstance.getUsedAddresses();
+                    if (addresses.length === 0) {
+                        alert('No addresses found in the wallet.');
+                        return;
+                    }
+                    const address = addresses[0];
+                    const truncatedAddress = `${address.slice(0, 20)}...${address.slice(-8)}`;
+                    document.getElementById('walletAddress').innerHTML = `Wallet Address: <code>${truncatedAddress}</code>`;
+                    
+                    // Fetch UTXOs and process them
+                    const utxos = await walletInstance.getUtxos();
+                    processUtxos(utxos);
+                    document.getElementById('balances').style.display = 'block';
+                    document.getElementById('tokens').style.display = 'block';
+
+                    // Close the modal after connecting
+                    walletModal.style.display = 'none';
+                } catch (error) {
+                    console.error("Error connecting to wallet:", error);
+                    alert('Failed to connect to the wallet. Please check the console for details.');
+                }
+            };
+
+            walletList.appendChild(walletItem);
+        }
+    });
+
+    // Show the modal
+    walletModal.style.display = 'block';
 }
 
-/**
- * Connects to the Eternl wallet and fetches UTXOs.
- */
-async function connectWallet() {
-    try {
-        if (!window.cardano || !window.cardano.eternl) {
-            alert('Eternl wallet is not available. Please install Eternl wallet.');
-            return;
-        }
+// Close the modal when the close button is clicked
+document.getElementById('closeModal').onclick = function() {
+    document.getElementById('walletModal').style.display = 'none';
+}
 
-        const wallet = await window.cardano.eternl.enable();
-        console.log("Connected Wallet:", wallet);
-
-        // Get the change address
-        const addresses = await wallet.getUsedAddresses();
-        if (addresses.length === 0) {
-            alert('No addresses found in the wallet.');
-            return;
-        }
-        const address = addresses[0];
-        const truncatedAddress = `${address.slice(0, 20)}...${address.slice(-8)}`;
-        document.getElementById('walletAddress').innerHTML = `Wallet Address: <code>${truncatedAddress}</code>`;
-
-        // Fetch UTXOs
-        const utxos = await wallet.getUtxos();
-        console.log("Fetched UTXOs:", utxos);
-
-        if (utxos.length === 0) {
-            alert('No UTXOs found in the wallet.');
-            document.getElementById('walletBalance').innerHTML = 'Balance: 0 ADA';
-            document.getElementById('tokenDetails').innerHTML = 'Tokens: None';
-            return;
-        }
-
-        // Process UTXOs
-        processUtxos(utxos);
-
-        // Show balances and token table
-        document.getElementById('balances').style.display = 'block';
-        document.getElementById('tokens').style.display = 'block';
-
-    } catch (error) {
-        console.error("Error connecting wallet:", error);
-        alert('Failed to connect to the wallet. Please check the console for details.');
+// Close the modal when clicking outside of the modal
+window.onclick = function(event) {
+    const modal = document.getElementById('walletModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
     }
 }
 
 // Event Listener for Connect Wallet Button
 document.addEventListener('DOMContentLoaded', () => {
     const connectWalletButton = document.getElementById('connectWallet');
-    connectWalletButton.addEventListener('click', connectWallet);
+    connectWalletButton.addEventListener('click', showWalletSelection);
 });
 
 </script>
