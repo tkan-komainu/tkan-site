@@ -230,6 +230,26 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .token-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1em;
+        }
+
+        .token-table th, .token-table td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        .token-table th {
+            background-color: #f5f5f5;
+        }
+
+        .token-table tr:hover {
+            background-color: #f9f9f9;
+        }
     </style>
     <!-- Include Particle.js -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
@@ -292,6 +312,28 @@
         <p id="walletAddress">Wallet Address: Not Connected</p>
         <div id="walletBalance">Balance: Not Connected</div>
         <div id="tokenDetails">Tokens: Not yet Available</div>
+    </div>
+    <div class="balances" id="balances" style="display: none;">
+        <h2>Balances</h2>
+        <p id="totalAvailable">Total ADA Available: 0 ADA</p>
+        <p id="totalLocked">Total ADA Locked: 0 ADA</p>
+        <p id="totalCollateral">Total ADA Collateral: 0 ADA</p>
+    </div>
+    
+    <div class="tokens" id="tokens" style="display: none;">
+        <h2>Token List</h2>
+        <table id="tokenTable" class="token-table">
+            <thead>
+                <tr>
+                    <th>Token Name</th>
+                    <th>Policy ID</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody id="tokenListBody">
+                <!-- Token rows will be inserted here -->
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -467,9 +509,17 @@ function uint8ArrayToHex(uint8Array) {
     console.log('Token Array:', tokenArray);
 
     // Extract ADA amount
-    const adaAmountArray = tokenArray[0]; // Assuming the first element is the ADA amount in Uint8Array
-    const adaBalance = adaAmountArray/1_000_000;
-    console.log('ADA Balance:', adaBalance);
+    let adaAmountArray = BigInt(0);
+    if (typeof tokenArray === 'number') {
+        console.log('ADA ONLY');
+        adaAmountArray = tokenArray;
+    } else {
+        console.log('ADA with Tokens');
+        adaAmountArray = tokenArray[0]; // Assuming the first element is the ADA amount in Uint8Array
+    } 
+    let adaBalance = BigInt(0);
+    adaBalance = adaAmountArray/1_000_000;
+    console.log('UTXO ADA Balance:', adaBalance);
     //const adaBalance = adaAmountHex !== undefined ? BigInt('0x' + adaAmountHex) : BigInt(0);
     //console.log('ADA Balance (BigInt):', adaBalance);
 
@@ -485,14 +535,12 @@ function uint8ArrayToHex(uint8Array) {
                     if (assetMap.hasOwnProperty(assetName)) {
                         const quantity = assetMap[assetName]; // Get the quantity for this asset
                         const tokenKey = `${policyId}-${assetName}`; // Create a unique key for the token
-                        console.log("quantity", quantity );
-                        console.log("tokenkey", tokenKey);
-                        // Ensure quantity is treated as BigInt
-                         const quantityBigInt = BigInt(quantity); // Convert to BigInt
+                         // Ensure quantity is treated as BigInt
+                         const quantityBigInt = quantity; // Convert to BigInt
 
                         // Initialize token balance if it doesn't exist
                         if (!tokenBalances[tokenKey]) {
-                            tokenBalances[tokenKey] = BigInt(0); // Initialize with BigInt(0)
+                            tokenBalances[tokenKey] = 0.0; // Initialize with BigInt(0)
                         }
 
                         // Accumulate the quantity
@@ -519,23 +567,27 @@ function uint8ArrayToHex(uint8Array) {
 }
 
 function processUtxos(utxos) {
-    let totalADA = BigInt(0);
-    let totalLocked = BigInt(0);
-    let totalCollateral = BigInt(0);
+    let totalADA = 0.0;
+    let totalLocked = 0.0;
+    let totalCollateral = 0.0;
     const tokenBalances = {};
-
+    
     utxos.forEach((utxoHex, index) => {
         console.log(`Processing UTXO ${index}:`, utxoHex);
         const decodedUtxo = decodeUtxo(utxoHex);
         console.log('Decoded UTXO:', decodedUtxo);
+        console.log('UTXO ADA Balance:', decodedUtxo.ada, "Type:", typeof decodedUtxo.ada);
         // Update total ADA balance
         totalADA += decodedUtxo.ada; // Assuming all ADA is available for simplicity
-
+        console.log('Total ADA Balance:', totalADA);
         // Update token balances
         for (const [tokenKey, quantity] of Object.entries(decodedUtxo.tokens)) {
             console.log('Token Key:', tokenKey);
             console.log('Quantity:', quantity);
-            tokenBalances[tokenKey] = (tokenBalances[tokenKey] || BigInt(0)) + quantity;
+            if (!tokenBalances[tokenKey]) {
+                tokenBalances[tokenKey] = 0.0;
+            }
+            tokenBalances[tokenKey] = Number(quantity);
             console.log('Updated Token Balance:', tokenBalances[tokenKey]);
         }
     });
@@ -550,18 +602,37 @@ function displayBalances(available, locked, collateral, tokenBalances) {
     console.log(`Total ADA Locked: ${locked}`);
     console.log(`Total ADA Collateral: ${collateral}`);
 
-    // Update the DOM
-    document.getElementById('totalAvailable').innerText = `Total ADA Available: ${(Number(available) / 1_000_000).toFixed(6)} ADA`;
-    document.getElementById('totalLocked').innerText = `Total ADA Locked: ${(Number(locked) / 1_000_000).toFixed(6)} ADA`;
-    document.getElementById('totalCollateral').innerText = `Total ADA Collateral: ${(Number(collateral) / 1_000_000).toFixed(6)} ADA`;
+    // Update the DOM for ADA values
+    document.getElementById('totalAvailable').innerText = `Total ADA Available: ${available} ADA`;
+    document.getElementById('totalLocked').innerText = `Total ADA Locked: ${locked} ADA`;
+    document.getElementById('totalCollateral').innerText = `Total ADA Collateral: ${collateral} ADA`;
     
-    const tokenListElement = document.getElementById('tokenList');
-    tokenListElement.innerHTML = ''; // Clear existing list
+    const tokenListBody = document.getElementById('tokenListBody');
+    tokenListBody.innerHTML = ''; // Clear existing rows
+
     for (const [tokenKey, quantity] of Object.entries(tokenBalances)) {
+        
         const [policyId, assetName] = tokenKey.split('-');
-        const listItem = document.createElement('li');
-        listItem.innerText = `Token: ${assetName} (Policy: ${policyId}) - Quantity: ${quantity}`;
-        tokenListElement.appendChild(listItem);
+        const row = document.createElement('tr'); // Create a new table row
+        
+        const asstNameByte = new Uint8Array(assetName.split(',').map(Number));
+        const policyIdByte = new Uint8Array(policyId.split(',').map(Number));
+        // Create cells for the token name, policy ID, and quantity
+        const nameCell = document.createElement('td');
+        nameCell.innerText = bytesToString(asstNameByte); // Token name
+        row.appendChild(nameCell);
+
+        const policyCell = document.createElement('td');
+        const policyIdHex = uint8ArrayToHex(policyId); // Policy ID
+        const truncatedPolicyID = `${policyIdHex.slice(0, 20)}...${policyIdHex.slice(-8)}`
+        policyCell.innerText = truncatedPolicyID
+,        row.appendChild(policyCell);
+
+        const quantityCell = document.createElement('td');
+        quantityCell.innerText = quantity.toString(); // Quantity
+        row.appendChild(quantityCell);
+
+        tokenListBody.appendChild(row); // Append the row to the table body
     }
 }
 
@@ -610,6 +681,10 @@ async function connectWallet() {
 
         // Process UTXOs
         processUtxos(utxos);
+
+        // Show balances and token table
+        document.getElementById('balances').style.display = 'block';
+        document.getElementById('tokens').style.display = 'block';
 
     } catch (error) {
         console.error("Error connecting wallet:", error);
