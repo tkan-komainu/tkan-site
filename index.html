@@ -82,6 +82,7 @@
                     <th>Token Name</th>
                     <th>Policy ID</th>
                     <th>Quantity</th>
+                    <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)"></th>
                 </tr>
             </thead>
             <tbody id="tokenListBody">
@@ -342,8 +343,25 @@ function displayBalances(available, locked, collateral, tokenBalances) {
         quantityCell.innerText = quantity.toString(); // Quantity
         row.appendChild(quantityCell);
 
+        // Create a cell for the checkbox
+        const checkboxCell = document.createElement('td');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox'; // Set the type to checkbox
+        checkbox.className = 'token-checkbox'; // Add a class for easier selection if needed
+        checkbox.value = bytesToString(asstNameByte); // Set the value to the asset name or any identifier
+        checkboxCell.appendChild(checkbox); // Append the checkbox to the cell
+        row.appendChild(checkboxCell); // Append the cell to the row
+
         tokenListBody.appendChild(row); // Append the row to the table body
     }
+}
+
+// Function to select/deselect all checkboxes
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.token-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = checkbox.checked; // Set each checkbox to the state of the "Select All" checkbox
+    });
 }
 
 function showWalletSelection() {
