@@ -485,7 +485,9 @@ function uint8ArrayToHex(uint8Array) {
                     if (assetMap.hasOwnProperty(assetName)) {
                         const quantity = assetMap[assetName]; // Get the quantity for this asset
                         const tokenKey = `${policyId}-${assetName}`; // Create a unique key for the token
-                         // Ensure quantity is treated as BigInt
+                        console.log("quantity", quantity );
+                        console.log("tokenkey", tokenKey);
+                        // Ensure quantity is treated as BigInt
                          const quantityBigInt = BigInt(quantity); // Convert to BigInt
 
                         // Initialize token balance if it doesn't exist
