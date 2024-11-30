@@ -69,9 +69,9 @@
     </div>
     <div class="balances" id="balances" style="display: none;">
         <h2>Balances</h2>
-        <p id="totalAvailable">Total ADA Available: 0 ADA</p>
+        <p id="totalAvailable">Total ADA: 0 ADA</p>
+        <p id="totalCollateral">Total ADA Available: 0 ADA</p>
         <p id="totalLocked">Total ADA Locked: 0 ADA</p>
-        <p id="totalCollateral">Total ADA Collateral: 0 ADA</p>
     </div>
     
     <div class="tokens" id="tokens" style="display: none;">
@@ -148,6 +148,7 @@ particlesJS("particles-js", {
 });
 
 // Helper Functions
+let selectedTokens = []; // Array to hold selected tokens
 
 /**
  * Converts a hex string to a Uint8Array.
@@ -204,7 +205,8 @@ function uint8ArrayToHex(uint8Array) {
     //console.log('UTXO Bytes:', utxoBytes);
     const utxo = CBOR.decode(utxoBytes.buffer);
     //console.log('Decoded UTXO:', utxo);
-
+    let isLocked = true;
+    let isCollateral = false;
     const [txInput, output] = utxo;
     const [txHash, txIndex] = txInput;
 
@@ -222,6 +224,7 @@ function uint8ArrayToHex(uint8Array) {
     if (typeof tokenArray === 'number') {
         console.log('ADA ONLY');
         adaAmountArray = tokenArray;
+        isCollateral = true;
     } else {
         console.log('ADA with Tokens');
         adaAmountArray = tokenArray[0]; // Assuming the first element is the ADA amount in Uint8Array
@@ -265,6 +268,7 @@ function uint8ArrayToHex(uint8Array) {
         }
     } else {
         console.log('No tokens found in this UTXO.');
+        isLocked = false;
     }
 
     return {
@@ -272,6 +276,8 @@ function uint8ArrayToHex(uint8Array) {
         txIndex,
         ada: adaBalance,
         tokens: tokenBalances,
+        isADALocked: isLocked,
+        isADACollateral: isCollateral,
     };
 }
 
@@ -286,9 +292,18 @@ function processUtxos(utxos) {
         const decodedUtxo = decodeUtxo(utxoHex);
         console.log('Decoded UTXO:', decodedUtxo);
         console.log('UTXO ADA Balance:', decodedUtxo.ada, "Type:", typeof decodedUtxo.ada);
+        console.log('Available and Locked', decodedUtxo.isADACollateral, decodedUtxo.isADALocked);
+        
         // Update total ADA balance
+        if (decodedUtxo.isADACollateral)
+            totalCollateral += decodedUtxo.ada;
+        else if (decodedUtxo.isADALocked)
+            totalLocked += decodedUtxo.ada;
+
         totalADA += decodedUtxo.ada; // Assuming all ADA is available for simplicity
         console.log('Total ADA Balance:', totalADA);
+        console.log('Collateral: ', totalCollateral);
+        console.log('Available: ', totalLocked);
         // Update token balances
         for (const [tokenKey, quantity] of Object.entries(decodedUtxo.tokens)) {
             console.log('Token Key:', tokenKey);
@@ -312,9 +327,9 @@ function displayBalances(available, locked, collateral, tokenBalances) {
     console.log(`Total ADA Collateral: ${collateral}`);
 
     // Update the DOM for ADA values
-    document.getElementById('totalAvailable').innerText = `Total ADA Available: ${available} ADA`;
+    document.getElementById('totalAvailable').innerText = `Total ADA : ${available} ADA`;
+    document.getElementById('totalCollateral').innerText = `Total ADA Available: ${collateral} ADA`;
     document.getElementById('totalLocked').innerText = `Total ADA Locked: ${locked} ADA`;
-    document.getElementById('totalCollateral').innerText = `Total ADA Collateral: ${collateral} ADA`;
     
     const tokenListBody = document.getElementById('tokenListBody');
     tokenListBody.innerHTML = ''; // Clear existing rows
@@ -348,10 +363,21 @@ function displayBalances(available, locked, collateral, tokenBalances) {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox'; // Set the type to checkbox
         checkbox.className = 'token-checkbox'; // Add a class for easier selection if needed
-        checkbox.value = bytesToString(asstNameByte); // Set the value to the asset name or any identifier
+        checkbox.value = JSON.stringify({ assetName: bytesToString(asstNameByte), policyId, amount: quantity }); // Store the token data as a JSON string
+
+        // Add event listener to update selectedTokens array
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                // Add to selectedTokens if checked
+                selectedTokens.push(JSON.parse(this.value));
+            } else {
+                // Remove from selectedTokens if unchecked
+                selectedTokens = selectedTokens.filter(token => token.assetName !== bytesToString(asstNameByte) || token.policyId !== policyId);
+            }
+            console.log("Selected Tokens:", selectedTokens); // Log the selected tokens
+        });
         checkboxCell.appendChild(checkbox); // Append the checkbox to the cell
         row.appendChild(checkboxCell); // Append the cell to the row
-
         tokenListBody.appendChild(row); // Append the row to the table body
     }
 }
@@ -361,7 +387,19 @@ function toggleSelectAll(checkbox) {
     const checkboxes = document.querySelectorAll('.token-checkbox');
     checkboxes.forEach(cb => {
         cb.checked = checkbox.checked; // Set each checkbox to the state of the "Select All" checkbox
+        if (checkbox.checked) {
+            // If "Select All" is checked, add all tokens to selectedTokens
+            const tokenData = JSON.parse(cb.value);
+            if (!selectedTokens.some(token => token.assetName === tokenData.assetName && token.policyId === tokenData.policyId)) {
+                selectedTokens.push(tokenData);
+            }
+        } else {
+            // If "Select All" is unchecked, clear the selectedTokens array
+            selectedTokens = [];
+        }
     });
+    console.log("Selected Tokens after Select All:", selectedTokens); // Log the selected tokens
+
 }
 
 function showWalletSelection() {
